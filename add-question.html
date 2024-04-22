@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+  <script src="configuration.js"></script>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,96 +19,94 @@
     </ul>
 
     <form>
-      <!-- Question Text -->
-      <label for="questionText">Question:</label><br />
-      <textarea
-        id="questionText"
-        name="description"
-        rows="4"
-        cols="50"
-        required
-      ></textarea
-      ><br />
+      <!--Question text-->
+      <label for="questionText">Question❓:</label><br />
+      <textarea id="questionText" name="description" rows="4" cols="50" required></textarea><br />
 
       <!-- Image Upload -->
       <label for="imageUpload">Image:</label><br />
-      <input
-        type="file"
-        id="imageUpload"
-        name="imageFile"
-        accept="image/*"
-      /><br />
+      <input type="file" id="imageUpload" name="imageFile" accept="image/*" /><br />
 
       <!-- Options -->
       <label>Options:</label><br />
       <input type="radio" id="optionA" name="answer" value="A" required />
       <label for="optionA">A. </label>
       <input type="text" id="optionAText" name="optionA" required /><br />
-
+  
       <input type="radio" id="optionB" name="answer" value="B" required />
       <label for="optionB">B. </label>
       <input type="text" id="optionBText" name="optionB" required /><br />
-
+  
       <input type="radio" id="optionC" name="answer" value="C" required />
       <label for="optionC">C. </label>
       <input type="text" id="optionCText" name="optionC" required /><br />
-
+      
       <!-- Submit Button -->
-      <input type="button" value="Add The Question" onclick="add()" />
+      <input type="button" value="Add The Question🤓" onclick="add()" />
     </form>
 
     <div id="list" class="cards"></div>
 
     <script>
-      let host = "http://localhost:8080";
+      let host = getHost();
       let questions = [];
       displayTheQuestions();
-
+  
       async function getAll() {
-        let response = await fetch(host + "/questions");
+        const headers = { "Authorization": `Bearer ${configuration.token()}` };
+        let response = await fetch(host + "/questions", { headers });
+        if (response.status == 401) {
+          logout();
+        }
         let result = await response.json();
         return result;
       }
-
+  
       async function displayTheQuestions() {
         if (questions.length == 0) {
           questions = await getAll();
         }
-
         let list = document.getElementById("list");
-        list.innerHTML = "";
-
+        list.innerHTML = "";  
         for (let question of questions) {
+          const headers = { "Authorization": `Bearer ${configuration.token()}` };
+          console.log(question.id)
+          let response = await fetch(`${host}/questions/${question.id}/image`, { headers });
+          if (response.status == 401) {
+            logout();
+          }
+          let result = await response.blob();
+          let imageUrl = URL.createObjectURL(result); 
           let div = document.createElement("div");
           div.className = "card";
           let innerHtml = `
-         
-        <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
-        <div class="container">
-          <h4><b>${question.id}</b></h4> 
-          <p>${question.description}</p>
-          <form>
-              <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
-              <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
-
-              <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
-              <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
-
-              <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
-              <label for="q${question.id}ptionC">${question.choices[2]}</label><br>       
-          </form> 
-        </div>
-     
-            `;
+           
+              <img src="${imageUrl}" alt="question" style="width:100%">
+              <div class="container">
+                <h4><b>${question.id}</b></h4> 
+                <p>${question.description}</p>
+                <form>
+                    <input type="radio" id="q${question.id}ptionA" name="q2Answer" value="A">
+                    <label for="q${question.id}ptionA">${question.choices[0]}</label><br>
+  
+                    <input type="radio" id="q${question.id}ptionB" name="q2Answer" value="B">
+                    <label for="q${question.id}ptionB">${question.choices[1]}</label><br>
+  
+                    <input type="radio" id="q${question.id}ptionC" name="q2Answer" value="C">
+                    <label for="q${question.id}ptionC">${question.choices[2]}</label><br>       
+                </form> 
+              </div>
+          
+                  `;
           div.innerHTML = innerHtml;
           list.appendChild(div);
         }
       }
-
+  
+      //add function
       function add() {
         let form = document.forms[0];
         let formData = new FormData(form);
-        // output as an object
         let data = Object.fromEntries(formData);
         let question = {};
         question.description = data.description;
@@ -122,49 +121,59 @@
           case "C":
             question.answer = data.optionC;
             break;
-        }        
+        }
+        console.log(data.imageFile)
         addTheQuestion(question, data.imageFile);
       }
-
+  
       async function addTheQuestion(question, imageFile) {
         let message = "";
-
         let request = {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${configuration.token()}`
           },
           body: JSON.stringify(question),
         };
         let response = await fetch(host + "/questions", request);
-        if (response.status == 200) {
+        if (response.status == 401) {
+          logout();
+        } else if (response.status == 200) {
           let id = await response.json();
           let result = await submitTheImage(id, imageFile);
           if (result) {
-            message = "The question was added successfully!";
+            console.log(result)
+            message = " QUESTION WAS ADDED SUCCESSFULLY!";
           } else {
             message =
-              "Something went wrong! Question data was saved successfully but question image was not saved.";
+              "Something went wrong!";
           }
         } else {
           console.log(response);
-          message = "Something went wrong! Question data could not be saved.";
+          message = "Something went wrong, Question data could not be saved.";
         }
         alert(message);
         location.href = "add-question.html";
       }
-
+  
       async function submitTheImage(id, imageFile) {
         let formData = new FormData();
         formData.append("file", imageFile);
         let request = {
           method: "POST",
-          body: formData,
+          headers: {
+            "Authorization": `Bearer ${configuration.token()}`
+          },
+          body: formData
         };
         let response = await fetch(
           host + "/questions/" + id + "/image",
           request
         );
+        if (response.status == 401) {
+          logout();
+        }
         let result = await response.json();
         return result;
       }

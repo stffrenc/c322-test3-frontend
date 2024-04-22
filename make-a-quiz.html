@@ -1,86 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Make a quiz</title>
-    <link rel="stylesheet" href="navbar.css" />
-    <link rel="stylesheet" href="general.css" />
-    <link rel="stylesheet" href="cards.css" />
-    <link rel="stylesheet" href="make-a-quiz.css" />
-  </head>
-  <body>
-    <ul class="topnav">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="add-question.html">Add questions</a></li>
-      <li><a class="active" href="make-a-quiz.html">Create a quiz</a></li>
-      <li><a href="take-a-quiz.html">Take a quiz</a></li>
-      <li class="right"><a href="login.html">Login</a></li>
-    </ul>
 
-    <div class="questions">
-      <h2>Questions Bank</h2>
-      <h3>Click on a question to add it to the quiz.</h3>
-      <div id="list" class="cards"></div>
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Make a quiz</title>
+  <link rel="stylesheet" href="navbar.css" />
+  <link rel="stylesheet" href="general.css" />
+  <link rel="stylesheet" href="cards.css" />
+  <link rel="stylesheet" href="make-a-quiz.css" />
+</head>
 
-    <div class="quiz">
-      <h2 id="quizHeader">The new quiz</h2>
-      Quiz title: <input id="quizTitle" />
-      <button onclick="saveTheQuiz()">Save your changes</button>
-      <button onclick="saveTheQuizAndNew()">
-        Save this quiz and start a new one
-      </button>
-      <h3>
-        If you want to remvoe a question from the quiz, you can click on the
-        question here ant it will be removed from the quiz.
-      </h3>
-      <div id="quiz"></div>
-    </div>
+<body>
+  <ul class="topnav">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="add-question.html">Add questions</a></li>
+    <li><a class="active" href="make-a-quiz.html">Create a quiz</a></li>
+    <li><a href="take-a-quiz.html">Take a quiz</a></li>
+    <li class="right"><a href="login.html">Login</a></li>
+  </ul>
+  <script src="configuration.js"></script>
 
-    <script>
-      let host = "http://localhost:8080";
-      let questions = [];
-      let list = document.getElementById("list");
-      let quiz = document.getElementById("quiz");
-      let quizHeader = document.getElementById("quizHeader");
-      quizHeader.innerText = `The new quiz(0 questions)`;
-      let quizId = null;
-      let quizQuestions = [];
+  <div class="questions">
+    <h2>QUESTIONS BANK📬</h2>
+    <h3>Click on a question to add it to the quiz.</h3>
+    <div id="list" class="cards"></div>
+  </div>
 
-      displayTheQuestions();
+  <div class="quiz">
+    <h2 id="quizHeader">The new quiz</h2>
+    Quiz title: <input id="quizTitle" />
+    <button onclick="saveTheQuiz()">Save your changes</button>
+    <button onclick="saveTheQuizAndNew()">
+      Save this quiz and start a new one
+    </button>
+    <h3>
+      If you want to remove a question from the quiz... click on the
+      question here and it will be removed from the quiz.
+    </h3>
+    <div id="quiz"></div>
+  </div>
 
-      async function getAll() {
-        let response = await fetch(host + "/questions");
-        let result = await response.json();
-        return result;
+  <script>
+    let host = getHost();
+    let questions = [];
+    let list = document.getElementById("list");
+    let quiz = document.getElementById("quiz");
+    let quizHeader = document.getElementById("quizHeader");
+    quizHeader.innerText = `The new quiz(0 questions)`;
+    let quizId = null;
+    let quizQuestions = [];
+
+    displayTheQuestions();
+
+    async function getAll() {
+      const headers = { "Authorization": `Bearer ${configuration.token()}` };
+      let response = await fetch(host + "/questions", { headers });
+      if (response.status == 401) {
+        logout();
       }
+      let result = await response.json();
+      return result;
+    }
 
-      async function displayTheQuestions() {
-        if (questions.length == 0) {
-          questions = await getAll();
+    async function displayTheQuestions() {
+      if (questions.length == 0) {
+        questions = await getAll();
+      }
+      list.innerHTML = "";
+      for (let question of questions) {
+        const headers = { "Authorization": `Bearer ${configuration.token()}` };        
+        let response = await fetch(`${host}/questions/${question.id}/image`, { headers });
+        if (response.status == 401) {
+          logout();
         }
-        list.innerHTML = "";
-        for (let question of questions) {
-          let div = document.createElement("div");
-          div.id = `${question.id}`;
-          div.onclick = function () {
-            if (div.parentNode.id == "list") {
-              quiz.appendChild(div);
-              quizQuestions.push(div.id);
-            } else {
-              list.appendChild(div);
-              const index = quizQuestions.indexOf(div.id);
-              quizQuestions.splice(index, 1);
-            }
-            let n = quiz.childElementCount;
-            quizHeader.innerText = `The new quiz(${n} questions)`;
-            console.log(quizQuestions);
-          };
-          div.className = "card";
-          let innerHtml = `
+        let result = await response.blob(); 
+        let imageUrl = URL.createObjectURL(result);
+        let div = document.createElement("div");
+        div.id = `${question.id}`;
+        div.onclick = function () {
+          if (div.parentNode.id == "list") {
+            quiz.appendChild(div);
+            quizQuestions.push(div.id);
+          } else {
+            list.appendChild(div);
+            const index = quizQuestions.indexOf(div.id);
+            quizQuestions.splice(index, 1);
+          }
+          let n = quiz.childElementCount;
+          quizHeader.innerText = `The new quiz(${n} questions)`;
+          console.log(quizQuestions);
+        };
+        div.className = "card";
+        let innerHtml = `
        
-      <img src="http://localhost:8080/questions/${question.id}/image" alt="question" style="width:100%">
+      <img src="${imageUrl}" alt="question" style="width:100%">
       <div class="container">
         <h4><b>${question.id}</b></h4> 
         <p>${question.description}</p>
@@ -97,49 +111,56 @@
       </div>
    
           `;
-          div.innerHTML = innerHtml;
-          list.appendChild(div);
-        }
+        div.innerHTML = innerHtml;
+        list.appendChild(div);
+      }
+    }
+
+    //saving the quiz
+    async function saveTheQuiz() {
+      let quizTitle = document.getElementById("quizTitle").value;
+      let endpoint = "";
+      let request = {};
+      if (!quizId) {
+        endpoint = host + "/quizzes";
+        request = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${configuration.token()}`
+          },
+          body: JSON.stringify({ "title": quizTitle, "questionIds": quizQuestions }),
+
+        };
+      } else {
+        endpoint = host + "/quizzes/" + quizId;
+        request = {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${configuration.token()}`
+          },
+          body: JSON.stringify({ "id": quizId, "title": quizTitle, "questionIds": quizQuestions }),
+
+        };
       }
 
-      async function saveTheQuiz() {
-        let quizTitle = document.getElementById("quizTitle").value;
-        let endpoint = "";
-        let request = {};
-        if (!quizId) {
-          endpoint = host + "/quizzes";
-          request = {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({"title": quizTitle, "questionIds": quizQuestions}),
-          };
-        } else {
-          endpoint = host + "/quizzes/" + quizId;
-          request = {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({"id": quizId, "title": quizTitle, "questionIds": quizQuestions}),
-          };
-        }
-
-        let response = await fetch(endpoint, request);
-        if(response.status == 200) {
-          quizId = await response.json();
-          alert("The quiz was saved successfully!");
-        }
-        else {
-          alert("The quiz was not saved. Something went wrong.")
-        }
+      let response = await fetch(endpoint, request);
+      if (response.status == 401) {
+        logout();
+      } else if (response.status == 200) {
+        quizId = await response.json();
+        alert("The quiz was saved successfully!");
       }
-
-      async function saveTheQuizAndNew() {
-        await saveTheQuiz();
-        location.href = "make-a-quiz.html";
+      else {
+        alert("The quiz was not saved. Something went wrong.")
       }
-    </script>
-  </body>
+    }
+
+    async function saveTheQuizAndNew() {
+      await saveTheQuiz();
+      location.href = "make-a-quiz.html";
+    }
+  </script>
+</body>
 </html>
