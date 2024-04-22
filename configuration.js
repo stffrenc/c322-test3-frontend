@@ -46,10 +46,10 @@ function getHost() {
     }
   }
   
-  async function signup() {
-    let email = document.getElementById("signupEmail").value;
-    let username = document.getElementById("signupUsername").value;
-    let password = document.getElementById("signupPassword").value;
+  async function signUp() {
+    let email = document.getElementById("signUpEmail").value;
+    let username = document.getElementById("signUpUsername").value;
+    let password = document.getElementById("signUpPassword").value;
   
     let customer = {email: email, username: username, password: password};
     let request = {
